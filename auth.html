@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SteamChat — Connexion & Inscription</title>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --silver: #b0b8c8;
+      --silver-light: #d8e0ec;
+      --silver-dark: #6a7282;
+      --silver-mid: #8890a0;
+      --iron: #3a3a3a;
+      --iron-dark: #1a1c22;
+      --glow: #c8d4e8;
+      --pipe-bg: #12151c;
+      --parchment: #e8eaf2;
+      --parchment-dark: #9aa0b8;
+      --leather: #1e2230;
+      --success: #86d39e;
+      --error: #e28a8a;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top, rgba(216,224,236,0.08), transparent 30%),
+        linear-gradient(180deg, #0f1219 0%, #090b12 100%);
+      font-family: 'Special Elite', cursive;
+      overflow: hidden;
+    }
+
+    @keyframes spin-cw { to { transform: rotate(360deg); } }
+    @keyframes spin-ccw { to { transform: rotate(-360deg); } }
+    @keyframes steam-rise {
+      0% { opacity: 0; transform: translateY(0) scaleX(1); }
+      40% { opacity: 0.45; }
+      100% { opacity: 0; transform: translateY(-60px) scaleX(1.5); }
+    }
+    @keyframes needle-swing {
+      0%,100% { transform: rotate(-20deg); }
+      50% { transform: rotate(30deg); }
+    }
+    @keyframes blink-led {
+      0%,49% { opacity: 1; }
+      50%,100% { opacity: 0.2; }
+    }
+    @keyframes pipe-shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes boil {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+
+    .page {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 84px 1fr;
+      background: var(--pipe-bg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pipe-top {
+      height: 84px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: linear-gradient(90deg, var(--silver-dark) 0%, var(--silver) 20%, var(--silver-light) 50%, var(--silver) 80%, var(--silver-dark) 100%);
+      border-bottom: 2px solid var(--silver-dark);
+      position: relative;
+      overflow: hidden;
+      z-index: 5;
+    }
+
+    .pipe-top::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.14) 50%, transparent 100%);
+      background-size: 200% 100%;
+      animation: pipe-shimmer 4s linear infinite;
+    }
+
+    .app-title {
+      font-family: 'Cinzel', serif;
+      font-size: 34px;
+      font-weight: 700;
+      color: var(--iron-dark);
+      text-shadow: 0 1px 0 var(--silver-light), 0 -1px 0 var(--silver-dark);
+      letter-spacing: 3px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 2;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 2;
+    }
+
+    .rivet {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, var(--silver-light), var(--silver-dark));
+      border: 1px solid var(--silver-dark);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+
+    .rivets-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .led {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #88aaff;
+      box-shadow: 0 0 6px #88aaff, 0 0 12px #88aaff;
+      animation: blink-led 1.4s step-end infinite;
+      border: 1px solid #2244aa;
+    }
+
+    .led-label {
+      font-size: 10px;
+      color: var(--silver-light);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .led-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .gauge-face {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #0e1118 0%, #080a0f 100%);
+      border: 3px solid var(--silver);
+      box-shadow: 0 0 0 1px var(--silver-dark), inset 0 2px 6px rgba(0,0,0,0.8);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .gauge-needle {
+      position: absolute;
+      width: 2px;
+      height: 20px;
+      background: linear-gradient(to top, #4488ff, #aaccff);
+      bottom: 50%;
+      left: 50%;
+      transform-origin: bottom center;
+      transform: rotate(-20deg);
+      animation: needle-swing 3s ease-in-out infinite;
+      border-radius: 2px 2px 0 0;
+    }
+
+    .gauge-center {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--silver-light);
+      box-shadow: 0 0 4px rgba(0,0,0,0.8);
+      z-index: 2;
+    }
+
+    .gear {
+      animation: spin-cw 6s linear infinite;
+      transform-origin: center;
+    }
+
+    .gear.ccw {
+      animation: spin-ccw 4s linear infinite;
+    }
+
+    .steam-puff {
+      position: absolute;
+      width: 12px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(220,225,240,0.35);
+      animation: steam-rise 2.5s ease-in-out infinite;
+      filter: blur(4px);
+    }
+
+    .steam-puff:nth-child(2) { animation-delay: 0.8s; left: 8px; }
+    .steam-puff:nth-child(3) { animation-delay: 1.6s; left: 16px; }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 540px 1fr;
+      align-items: center;
+      justify-items: center;
+      padding: 40px 20px;
+      position: relative;
+    }
+
+    .side-pipe {
+      width: 16px;
+      height: 78%;
+      border-radius: 20px;
+      background: linear-gradient(180deg, var(--silver-dark) 0%, var(--silver) 30%, var(--silver-light) 50%, var(--silver) 70%, var(--silver-dark) 100%);
+      border: 1px solid var(--silver-dark);
+      box-shadow: inset 0 0 8px rgba(255,255,255,0.2), 0 0 12px rgba(216,224,236,0.15);
+      position: relative;
+    }
+
+    .side-pipe::before,
+    .side-pipe::after {
+      content: '';
+      position: absolute;
+      left: -4px;
+      right: -4px;
+      height: 16px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--silver-light) 20%, var(--silver-dark) 100%);
+      border: 2px solid var(--silver-dark);
+    }
+
+    .side-pipe::before { top: 40px; }
+    .side-pipe::after { bottom: 40px; }
+
+    .auth-shell {
+      width: 100%;
+      max-width: 540px;
+      border: 3px solid var(--silver-dark);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #11141c 0%, #0b0d13 100%);
+      box-shadow:
+        0 0 0 1px var(--silver),
+        0 0 40px rgba(160,176,210,0.16),
+        inset 0 0 60px rgba(0,0,0,0.6);
+      overflow: hidden;
+      animation: fade-in 0.4s ease;
+      position: relative;
+    }
+
+    .auth-shell::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 20px rgba(216,224,236,0.05);
+    }
+
+    .auth-top {
+      padding: 18px 22px;
+      border-bottom: 1px solid rgba(176,184,200,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      background: linear-gradient(180deg, rgba(176,184,200,0.08), rgba(176,184,200,0.02));
+    }
+
+    .auth-top-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .auth-avatar {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      border: 2px solid var(--silver-dark);
+      background: var(--leather);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 0 0 1px var(--silver), inset 0 0 8px rgba(0,0,0,0.65);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .auth-avatar::after {
+      content: '';
+      position: absolute;
+      bottom: 3px;
+      right: 3px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #44aaff;
+      border: 1px solid #0b0d13;
+      box-shadow: 0 0 6px #44aaff;
+    }
+
+    .auth-title {
+      font-family: 'Cinzel', serif;
+      font-size: 20px;
+      color: var(--parchment);
+      letter-spacing: 1px;
+    }
+
+    .auth-subtitle {
+      font-size: 11px;
+      color: var(--silver);
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      margin-top: 2px;
+    }
+
+    .auth-status {
+      font-size: 11px;
+      color: var(--silver-light);
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .typing-dots span {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--silver-light);
+      animation: boil 0.8s ease-in-out infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(176,184,200,0.18);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 16px 12px;
+      border: none;
+      background: transparent;
+      color: var(--parchment-dark);
+      font-family: 'Cinzel', serif;
+      font-size: 15px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn:hover {
+      background: rgba(176,184,200,0.04);
+      color: var(--parchment);
+    }
+
+    .tab-btn.active {
+      color: var(--parchment);
+      border-bottom-color: var(--silver-light);
+      box-shadow: inset 0 -1px 0 rgba(216,224,236,0.2);
+      background: rgba(176,184,200,0.05);
+    }
+
+    .auth-body {
+      padding: 26px 24px 28px;
+    }
+
+    .panel {
+      display: none;
+      animation: fade-in 0.25s ease;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    .panel-intro {
+      margin-bottom: 22px;
+    }
+
+    .panel-title {
+      font-family: 'Cinzel', serif;
+      font-size: 24px;
+      color: var(--parchment);
+      margin-bottom: 6px;
+    }
+
+    .panel-text {
+      font-size: 14px;
+      color: var(--parchment-dark);
+      font-family: 'IM Fell English', serif;
+      line-height: 1.5;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field label {
+      font-family: 'Cinzel', serif;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--silver);
+    }
+
+    .input-wrapper {
+      background: linear-gradient(135deg, #090a10 0%, #0e1018 100%);
+      border: 2px solid var(--silver-dark);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+      height: 54px;
+      transition: all 0.2s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--silver);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6), 0 0 10px rgba(176,184,200,0.2);
+    }
+
+    .input-icon {
+      color: var(--silver-dark);
+      font-size: 16px;
+      width: 18px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .form-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--parchment);
+      font-family: 'IM Fell English', serif;
+      font-size: 17px;
+      caret-color: var(--silver-light);
+    }
+
+    .form-input::placeholder {
+      color: var(--silver-dark);
+      opacity: 0.85;
+      font-style: italic;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--parchment-dark);
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      margin-top: 2px;
+    }
+
+    .auth-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .btn-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, var(--silver-light), var(--silver-dark));
+      border: 2px solid var(--silver-dark);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--iron-dark);
+      font-size: 18px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.2);
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .btn-icon:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 12px rgba(216,224,236,0.3);
+      transform: scale(1.05);
+    }
+
+    .submit-btn {
+      flex: 1;
+      min-height: 56px;
+      border-radius: 999px;
+      border: 2px solid var(--silver-dark);
+      cursor: pointer;
+      background: radial-gradient(circle at 35% 35%, #e8eaf8, var(--silver-mid));
+      color: var(--iron-dark);
+      font-family: 'Cinzel', serif;
+      font-size: 18px;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 12px rgba(176,184,200,0.2);
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 18px;
+    }
+
+    .submit-btn:hover {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.6), 0 0 20px rgba(176,184,200,0.35);
+      transform: scale(1.01);
+    }
+
+    .submit-btn span:last-child {
+      font-size: 20px;
+    }
+
+    .status-box {
+      margin-top: 18px;
+      min-height: 22px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      font-family: 'IM Fell English', serif;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status-box.show {
+      display: block;
+    }
+
+    .status-box.success {
+      color: var(--success);
+      border-color: rgba(134,211,158,0.35);
+      background: rgba(134,211,158,0.08);
+    }
+
+    .status-box.error {
+      color: var(--error);
+      border-color: rgba(226,138,138,0.35);
+      background: rgba(226,138,138,0.08);
+    }
+
+    .bottom-note {
+      margin-top: 22px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--silver);
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      opacity: 0.85;
+    }
+
+    .corner-gears {
+      position: absolute;
+      right: 22px;
+      bottom: 20px;
+      opacity: 0.45;
+    }
+
+    @media (max-width: 900px) {
+      .content {
+        grid-template-columns: 1fr;
+        padding: 20px 14px;
+      }
+
+      .side-pipe {
+        display: none;
+      }
+
+      .auth-shell {
+        max-width: 100%;
+      }
+
+      .auth-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .auth-status {
+        white-space: normal;
+      }
+
+      .app-title {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="pipe-top">
+      <div class="app-title">
+        <svg width="36" height="36" viewBox="0 0 36 36">
+          <g class="gear" style="transform-origin:18px 18px">
+            <path d="M18,4 L20,10 L24,8 L24,13 L29,13 L27,17 L32,18 L27,19 L29,23 L24,23 L24,28 L20,26 L18,32 L16,26 L12,28 L12,23 L7,23 L9,19 L4,18 L9,17 L7,13 L12,13 L12,8 L16,10 Z" fill="var(--silver-dark)"/>
+            <circle cx="18" cy="18" r="6" fill="var(--iron-dark)" stroke="var(--silver-dark)" stroke-width="1"/>
+          </g>
+          <g class="gear ccw" style="transform-origin:28px 28px">
+            <path d="M28,21 L29,24 L31,23 L31,26 L34,26 L33,28 L35,28 L33,29 L34,31 L31,31 L31,34 L29,33 L28,35 L27,33 L25,34 L25,31 L22,31 L23,29 L21,28 L23,28 L22,26 L25,26 L25,23 L27,24 Z" fill="var(--silver-dark)" opacity="0.8"/>
+            <circle cx="28" cy="28" r="3" fill="var(--iron-dark)" stroke="var(--silver-dark)" stroke-width="0.5"/>
+          </g>
+        </svg>
+        STEAMCHAT
+      </div>
+
+      <div class="header-controls">
+        <div style="position:relative;width:30px;height:36px;flex-shrink:0;">
+          <div class="steam-puff" style="left:2px;bottom:0;"></div>
+          <div class="steam-puff" style="left:10px;bottom:0;"></div>
+          <div class="steam-puff" style="left:18px;bottom:0;"></div>
+        </div>
+
+        <div class="led-group">
+          <div class="led"></div>
+          <div class="led-label">ONLINE</div>
+        </div>
+
+        <div class="rivets-row">
+          <div class="rivet"></div>
+          <div class="rivet"></div>
+        </div>
+
+        <div class="gauge-face">
+          <div class="gauge-needle"></div>
+          <div class="gauge-center"></div>
+        </div>
+
+        <div class="rivets-row">
+          <div class="rivet"></div>
+          <div class="rivet"></div>
+        </div>
+
+        <svg width="44" height="44" viewBox="0 0 44 44">
+          <g class="gear" style="transform-origin:16px 16px">
+            <path d="M16,6 L17.5,11 L20,9.5 L20,13 L24,13 L22.5,16 L26,16 L22.5,17 L24,20 L20,20 L20,23.5 L17.5,22 L16,26 L14.5,22 L12,23.5 L12,20 L8,20 L9.5,17 L6,16 L9.5,16 L8,13 L12,13 L12,9.5 L14.5,11 Z" fill="var(--silver-dark)" stroke="var(--iron-dark)" stroke-width="0.5"/>
+            <circle cx="16" cy="16" r="5" fill="var(--iron-dark)" stroke="var(--silver-dark)" stroke-width="0.7"/>
+          </g>
+          <g class="gear ccw" style="transform-origin:30px 28px">
+            <path d="M30,20 L31,23 L33,22 L33,25 L36,25 L35,27 L37,28 L35,29 L36,31 L33,31 L33,34 L31,33 L30,36 L29,33 L27,34 L27,31 L24,31 L25,29 L23,28 L25,27 L24,25 L27,25 L27,22 L29,23 Z" fill="var(--silver)" stroke="var(--iron-dark)" stroke-width="0.5"/>
+            <circle cx="30" cy="28" r="4" fill="var(--iron-dark)" stroke="var(--silver)" stroke-width="0.7"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="side-pipe"></div>
+
+      <div class="auth-shell">
+        <div class="auth-top">
+          <div class="auth-top-left">
+            <div class="auth-avatar">⚙️</div>
+            <div>
+              <div class="auth-title">Portail d’Authentification</div>
+              <div class="auth-subtitle">Accès au réseau æthérique de SteamChat</div>
+            </div>
+          </div>
+
+          <div class="auth-status">
+            <span>Transmission sécurisée en cours</span>
+            <div class="typing-dots"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="login">Connexion</button>
+          <button class="tab-btn" data-tab="register">Inscription</button>
+        </div>
+
+        <div class="auth-body">
+          <div class="panel active" id="loginPanel">
+            <div class="panel-intro">
+              <div class="panel-title">Connexion</div>
+              <div class="panel-text">
+                Entrez vos identifiants pour rejoindre la salle des transmissions et accéder au chat.
+              </div>
+            </div>
+
+            <form id="loginForm" class="form-grid">
+              <div class="field">
+                <label for="loginUsername">Nom de compte</label>
+                <div class="input-wrapper">
+                  <span class="input-icon">👤</span>
+                  <input id="loginUsername" class="form-input" type="text" placeholder="Ex : capitaine_renard" required>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="loginPassword">Mot de passe</label>
+                <div class="input-wrapper">
+                  <span class="input-icon">🔐</span>
+                  <input id="loginPassword" class="form-input" type="password" placeholder="Votre mot de passe" required>
+                </div>
+              </div>
+
+              <div class="hint">Le serveur vérifiera vos identifiants avant d’autoriser l’envoi de messages.</div>
+
+              <div class="auth-actions">
+                <button type="button" class="btn-icon" title="Effacer" onclick="clearLogin()">🧹</button>
+                <button type="submit" class="submit-btn">
+                  <span>Se connecter</span>
+                  <span>➤</span>
+                </button>
+              </div>
+
+              <div id="loginStatus" class="status-box"></div>
+            </form>
+
+            <div class="bottom-note">Une fois connecté, vous pourrez recevoir l’historique et envoyer vos messages.</div>
+          </div>
+
+          <div class="panel" id="registerPanel">
+            <div class="panel-intro">
+              <div class="panel-title">Inscription</div>
+              <div class="panel-text">
+                Créez un nouveau compte. Le serveur vérifiera que le login n’est pas déjà utilisé.
+              </div>
+            </div>
+
+            <form id="registerForm" class="form-grid">
+              <div class="field">
+                <label for="registerUsername">Nom de compte</label>
+                <div class="input-wrapper">
+                  <span class="input-icon">👤</span>
+                  <input id="registerUsername" class="form-input" type="text" placeholder="Choisissez un login" required>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="registerPassword">Mot de passe</label>
+                <div class="input-wrapper">
+                  <span class="input-icon">🔐</span>
+                  <input id="registerPassword" class="form-input" type="password" placeholder="Choisissez un mot de passe" required>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="registerPasswordConfirm">Confirmation</label>
+                <div class="input-wrapper">
+                  <span class="input-icon">🗝️</span>
+                  <input id="registerPasswordConfirm" class="form-input" type="password" placeholder="Confirmez le mot de passe" required>
+                </div>
+              </div>
+
+              <div class="hint">Évite les mots de passe trop simples. La vérification finale sera faite côté serveur.</div>
+
+              <div class="auth-actions">
+                <button type="button" class="btn-icon" title="Effacer" onclick="clearRegister()">🧹</button>
+                <button type="submit" class="submit-btn">
+                  <span>Créer le compte</span>
+                  <span>⚙️</span>
+                </button>
+              </div>
+
+              <div id="registerStatus" class="status-box"></div>
+            </form>
+
+            <div class="bottom-note">Après création du compte, tu pourras te connecter depuis cet écran ou directement via le chat.</div>
+          </div>
+        </div>
+
+        <div class="corner-gears">
+          <svg width="54" height="34" viewBox="0 0 54 34">
+            <g class="gear" style="transform-origin:14px 17px">
+              <path d="M14,7 L15.5,12 L18.5,10 L18.5,14 L23,14 L21,17 L23,20 L18.5,20 L18.5,24 L15.5,22 L14,27 L12.5,22 L9.5,24 L9.5,20 L5,20 L7,17 L5,14 L9.5,14 L9.5,10 L12.5,12 Z" fill="var(--silver-dark)"/>
+              <circle cx="14" cy="17" r="5" fill="var(--pipe-bg)" stroke="var(--silver)" stroke-width="0.7"/>
+            </g>
+            <g class="gear ccw" style="transform-origin:36px 17px">
+              <path d="M36,9 L37,12 L39.5,11 L39.5,14 L42,14 L40.5,17 L42,20 L39.5,20 L39.5,23 L37,22 L36,25 L35,22 L32.5,23 L32.5,20 L30,20 L31.5,17 L30,14 L32.5,14 L32.5,11 L35,12 Z" fill="var(--silver)"/>
+              <circle cx="36" cy="17" r="4" fill="var(--pipe-bg)" stroke="var(--silver)" stroke-width="0.7"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="side-pipe"></div>
+    </div>
+  </div>
+
+  <script>
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const panels = {
+      login: document.getElementById('loginPanel'),
+      register: document.getElementById('registerPanel')
+    };
+
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const target = button.dataset.tab;
+
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        Object.values(panels).forEach(panel => panel.classList.remove('active'));
+        panels[target].classList.add('active');
+
+        clearStatus('loginStatus');
+        clearStatus('registerStatus');
+      });
+    });
+
+    function showStatus(id, message, type) {
+      const box = document.getElementById(id);
+      box.textContent = message;
+      box.className = `status-box show ${type}`;
+    }
+
+    function clearStatus(id) {
+      const box = document.getElementById(id);
+      box.textContent = '';
+      box.className = 'status-box';
+    }
+
+    function clearLogin() {
+      document.getElementById('loginForm').reset();
+      clearStatus('loginStatus');
+    }
+
+    function clearRegister() {
+      document.getElementById('registerForm').reset();
+      clearStatus('registerStatus');
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      if (!username || !password) {
+        showStatus('loginStatus', 'Veuillez remplir le nom de compte et le mot de passe.', 'error');
+        return;
+      }
+
+      showStatus('loginStatus', 'Connexion prête à être envoyée au serveur WebSocket.', 'success');
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const username = document.getElementById('registerUsername').value.trim();
+      const password = document.getElementById('registerPassword').value.trim();
+      const confirm = document.getElementById('registerPasswordConfirm').value.trim();
+
+      if (!username || !password || !confirm) {
+        showStatus('registerStatus', 'Veuillez remplir tous les champs.', 'error');
+        return;
+      }
+
+      if (password.length < 4) {
+        showStatus('registerStatus', 'Le mot de passe est trop court.', 'error');
+        return;
+      }
+
+      if (password !== confirm) {
+        showStatus('registerStatus', 'Les mots de passe ne correspondent pas.', 'error');
+        return;
+      }
+
+      showStatus('registerStatus', 'Inscription prête à être envoyée au serveur.', 'success');
+    });
+  </script>
+</body>
+</html>
