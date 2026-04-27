@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SteamChat — Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <div class="pipe-top">
+    <div class="app-title">⚙ STEAMCHAT</div>
+
+    <div class="header-controls">
+      <button class="btn-icon logout-btn" onclick="logout()" title="Déconnexion">⏻</button>
+
+      <div class="led-group">
+        <div class="led"></div>
+        <div class="led-label">ONLINE</div>
+      </div>
+
+      <div class="gauge-face">
+        <div class="gauge-needle"></div>
+        <div class="gauge-center"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-section-title">⚙ Correspondants</div>
+
+    <div class="contact-item active">
+      <div class="avatar">🎩<div class="avatar-status status-online"></div></div>
+      <div class="contact-info">
+        <div class="contact-name">Salon général</div>
+        <div class="contact-preview">Canal principal SteamChat</div>
+      </div>
+      <div class="contact-time">Now</div>
+    </div>
+  </div>
+
+  <div class="pipe-divider"></div>
+
+  <div class="chat-area">
+    <div class="chat-header">
+      <div class="avatar" style="width:50px;height:50px;font-size:20px;">
+        ⚙️
+        <div class="avatar-status status-online"></div>
+      </div>
+
+      <div>
+        <div class="chat-header-name">Salon général</div>
+        <div class="chat-header-sub">Transmission WebSocket active</div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="system-msg">— Connexion æthérique établie —</div>
+      <div class="date-divider">Aujourd'hui</div>
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <div class="btn-icon" title="Joindre un parchemin">📎</div>
+
+    <div class="input-wrapper">
+      <span style="color:var(--silver-dark);font-size:13px;opacity:0.7;">⌨</span>
+      <input class="chat-input" id="chatInput" type="text" placeholder="Dictez votre message par l'æther…" onkeydown="handleKey(event)">
+    </div>
+
+    <div class="btn-icon" title="Chiffrer le message">🔐</div>
+
+    <button class="send-btn" onclick="sendMessage()" title="Envoyer">➤</button>
+  </div>
+</div>
+
+<script>
+const user = localStorage.getItem("user");
+
+if (!user) {
+  window.location.href = "index.html";
+}
+
+let socket;
+
+try {
+  socket = new WebSocket("ws://localhost:3000");
+
+  socket.onopen = () => {
+    socket.send(JSON.stringify({
+      type: "join",
+      login: user
+    }));
+  };
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "history") {
+      data.messages.forEach(msg => {
+        displayMessage(msg.login, msg.content, msg.login === user);
+      });
+    }
+
+    if (data.type === "chat_message") {
+      displayMessage(data.login, data.content, data.login === user);
+    }
+
+    if (data.type === "error") {
+      alert(data.message);
+    }
+  };
+} catch (e) {
+  console.warn("WebSocket indisponible");
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function displayMessage(login, content, isMine) {
+  const messages = document.getElementById("messages");
+  const now = new Date();
+
+  const div = document.createElement("div");
+  div.className = isMine ? "msg mine" : "msg theirs";
+
+  div.innerHTML = `
+    <div class="msg-avatar">${isMine ? "⚙️" : "🎩"}</div>
+    <div class="msg-content">
+      <div class="msg-bubble">
+        <strong>${escapeHtml(login)}</strong><br>
+        ${escapeHtml(content)}
+      </div>
+      <div class="msg-time">${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}</div>
+    </div>
+  `;
+
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById("chatInput");
+  const content = input.value.trim();
+
+  if (!content) return;
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: "chat_message",
+      content: content
+    }));
+  } else {
+    displayMessage(user, content, true);
+  }
+
+  input.value = "";
+}
+
+function handleKey(e) {
+  if (e.key === "Enter") sendMessage();
+}
+
+function logout() {
+  localStorage.removeItem("user");
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: "logout" }));
+  }
+
+  window.location.href = "index.html";
+}
+</script>
+<script>
+const user = localStorage.getItem("user");
+
+const socket = new WebSocket("ws://localhost:3000");
+
+socket.onopen = () => {
+  socket.send(JSON.stringify({
+    type: "join",
+    login: user
+  }));
+};
+
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  if (data.type === "chat_message") {
+    displayMessage(data.login, data.content);
+  }
+};
+
+function sendMessage() {
+  const input = document.getElementById("chatInput");
+  const content = input.value;
+
+  socket.send(JSON.stringify({
+    type: "chat_message",
+    content: content
+  }));
+
+  input.value = "";
+}
+</script>
+</body>
+</html>
