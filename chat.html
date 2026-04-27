@@ -86,7 +86,7 @@ if (!user) {
 let socket;
 
 try {
-  socket = new WebSocket("ws://localhost:3000");
+  socket = new WebSocket("ws://172.29.20.76:9001");
 
   socket.onopen = () => {
     socket.send(JSON.stringify({

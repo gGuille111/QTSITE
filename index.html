@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body class="auth-page">
 
 <header class="pipe-top">
@@ -28,7 +29,7 @@
     <div class="auth-head">
       <div class="auth-avatar">⚙️</div>
       <div>
-        <h1>Portail d’Authentification</h1>
+        <h1>Portail d'Authentification</h1>
         <p>Accès au réseau æthérique de SteamChat</p>
       </div>
     </div>
@@ -38,14 +39,15 @@
       <button class="tab-btn" onclick="showRegister()">Inscription</button>
     </div>
 
+    <!-- Panneau Connexion -->
     <div id="loginPanel" class="auth-panel active">
-      <label>Nom de compte</label>
+      <label for="loginUser">Nom de compte</label>
       <div class="input-wrapper">
         <span>👤</span>
         <input id="loginUser" class="form-input" type="text" placeholder="Nom de compte">
       </div>
 
-      <label>Mot de passe</label>
+      <label for="loginPass">Mot de passe</label>
       <div class="input-wrapper">
         <span>🔐</span>
         <input id="loginPass" class="form-input" type="password" placeholder="Mot de passe">
@@ -54,20 +56,21 @@
       <button class="auth-btn" onclick="login()">Se connecter ➤</button>
     </div>
 
+    <!-- Panneau Inscription -->
     <div id="registerPanel" class="auth-panel">
-      <label>Nom de compte</label>
+      <label for="regUser">Nom de compte</label>
       <div class="input-wrapper">
         <span>👤</span>
         <input id="regUser" class="form-input" type="text" placeholder="Choisissez un login">
       </div>
 
-      <label>Mot de passe</label>
+      <label for="regPass">Mot de passe</label>
       <div class="input-wrapper">
         <span>🔐</span>
         <input id="regPass" class="form-input" type="password" placeholder="Choisissez un mot de passe">
       </div>
 
-      <label>Confirmation</label>
+      <label for="regPass2">Confirmation</label>
       <div class="input-wrapper">
         <span>🗝️</span>
         <input id="regPass2" class="form-input" type="password" placeholder="Confirmez le mot de passe">
@@ -79,135 +82,89 @@
 </main>
 
 <script>
-let socket;
+  const SERVER = "http://172.29.20.76:9000";
 
-try {
-  socket = new WebSocket("ws://localhost:3000");
+  // ── Onglets ──────────────────────────────────────
+  function showLogin() {
+    document.getElementById("loginPanel").classList.add("active");
+    document.getElementById("registerPanel").classList.remove("active");
+    document.querySelectorAll(".tab-btn")[0].classList.add("active");
+    document.querySelectorAll(".tab-btn")[1].classList.remove("active");
+  }
 
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+  function showRegister() {
+    document.getElementById("loginPanel").classList.remove("active");
+    document.getElementById("registerPanel").classList.add("active");
+    document.querySelectorAll(".tab-btn")[0].classList.remove("active");
+    document.querySelectorAll(".tab-btn")[1].classList.add("active");
+  }
 
-    if (data.type === "login_result") {
-      if (data.success) {
-        localStorage.setItem("user", data.login);
+  // ── Connexion ────────────────────────────────────
+  async function login() {
+    const login = document.getElementById("loginUser").value.trim();
+    const password = document.getElementById("loginPass").value.trim();
+
+    if (!login || !password) {
+      alert("Veuillez remplir tous les champs.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${SERVER}/connexion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login, pasword: password }) // "pasword" sans 's' — correspond au serveur
+      });
+
+      const data = await res.json();
+
+      if (res.status === 202) {
+        localStorage.setItem("user", JSON.stringify(data.user)); // { id, login }
         window.location.href = "chat.html";
       } else {
-        alert(data.message || "Connexion refusée");
+        alert(data.message || "Connexion refusée.");
       }
+    } catch (err) {
+      console.error("Erreur réseau :", err);
+      alert("Impossible de joindre le serveur.");
+    }
+  }
+
+  // ── Inscription ──────────────────────────────────
+  async function register() {
+    const login = document.getElementById("regUser").value.trim();
+    const password = document.getElementById("regPass").value.trim();
+    const confirm = document.getElementById("regPass2").value.trim();
+
+    if (!login || !password || !confirm) {
+      alert("Veuillez remplir tous les champs.");
+      return;
     }
 
-    if (data.type === "register_result") {
-      alert(data.message || "Réponse inscription reçue");
+    if (password !== confirm) {
+      alert("Les mots de passe ne correspondent pas.");
+      return;
     }
-  };
-} catch (e) {
-  console.warn("WebSocket indisponible");
-}
 
-function showLogin() {
-  document.getElementById("loginPanel").classList.add("active");
-  document.getElementById("registerPanel").classList.remove("active");
-  document.querySelectorAll(".tab-btn")[0].classList.add("active");
-  document.querySelectorAll(".tab-btn")[1].classList.remove("active");
-}
+    try {
+      const res = await fetch(`${SERVER}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login, pasword: password }) // "pasword" sans 's' — correspond au serveur
+      });
 
-function showRegister() {
-  document.getElementById("loginPanel").classList.remove("active");
-  document.getElementById("registerPanel").classList.add("active");
-  document.querySelectorAll(".tab-btn")[0].classList.remove("active");
-  document.querySelectorAll(".tab-btn")[1].classList.add("active");
-}
+      const data = await res.json();
+      alert(data.message || "Réponse reçue.");
 
-function login() {
-  const login = document.getElementById("loginUser").value.trim();
-  const password = document.getElementById("loginPass").value.trim();
-
-  if (!login || !password) {
-    alert("Veuillez remplir tous les champs.");
-    return;
+      if (res.status === 200) {
+        showLogin(); // redirige vers l'onglet connexion après inscription
+      }
+    } catch (err) {
+      console.error("Erreur réseau :", err);
+      alert("Impossible de joindre le serveur.");
+    }
   }
-
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    localStorage.setItem("user", login);
-    window.location.href = "chat.html";
-    return;
-  }
-
-  socket.send(JSON.stringify({
-    type: "login",
-    login: login,
-    password: password
-  }));
-}
-
-function register() {
-  const login = document.getElementById("regUser").value.trim();
-  const password = document.getElementById("regPass").value.trim();
-  const confirm = document.getElementById("regPass2").value.trim();
-
-  if (!login || !password || !confirm) {
-    alert("Veuillez remplir tous les champs.");
-    return;
-  }
-
-  if (password !== confirm) {
-    alert("Les mots de passe ne correspondent pas.");
-    return;
-  }
-
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    alert("Serveur WebSocket non connecté.");
-    return;
-  }
-
-  socket.send(JSON.stringify({
-    type: "register",
-    login: login,
-    password: password
-  }));
-}
 </script>
-<script>
-const socket = new WebSocket("ws://localhost:3000");
 
-function login() {
-  const login = document.getElementById("loginUser").value;
-  const password = document.getElementById("loginPass").value;
-
-  socket.send(JSON.stringify({
-    type: "login",
-    login: login,
-    password: password
-  }));
-}
-
-function register() {
-  const login = document.getElementById("regUser").value;
-  const password = document.getElementById("regPass").value;
-
-  socket.send(JSON.stringify({
-    type: "register",
-    login: login,
-    password: password
-  }));
-}
-
-socket.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-
-  if (data.type === "login_result") {
-    if (data.success) {
-      localStorage.setItem("user", data.login);
-      window.location.href = "chat.html";
-    } else {
-      alert("Connexion refusée");
-    }
-  }
-
-  if (data.type === "register_result") {
-    alert(data.message);
-  }
-};
-</script>
 </body>
 </html>
